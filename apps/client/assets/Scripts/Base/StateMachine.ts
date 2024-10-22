@@ -1,9 +1,9 @@
 import { _decorator, Animation, Component } from "cc";
-import { ENTITY_TYPE_ENUM } from "db://assets/Scripts/Common";
 import { FsmParamTypeEnum } from "db://assets/Scripts/Enum";
 const { ccclass } = _decorator;
 import State from "./State";
 import SubStateMachine from "./SubStateMachine";
+import {ENTITY_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
 
 type ParamsValueType = boolean | number;
 

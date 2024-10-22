@@ -1,7 +1,7 @@
 import Singleton from "../Base/Singleton";
 import {instantiate, Node } from 'cc'
-import {ENTITY_TYPE_ENUM} from "db://assets/Scripts/Common";
 import DataManager from "db://assets/Scripts/Global/DataManager";
+import {ENTITY_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
 
 // 对象池
 export default class ObjectPoolManager extends Singleton {

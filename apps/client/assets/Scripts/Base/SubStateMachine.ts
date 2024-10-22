@@ -9,7 +9,7 @@ export default abstract class SubStateMachine {
   private _currentState: State = null;
   stateMachines: Map<string, State> = new Map();
 
-  constructor(public fsm: StateMachine) {}
+  protected constructor(public fsm: StateMachine) {}
 
   get currentState() {
     return this._currentState;

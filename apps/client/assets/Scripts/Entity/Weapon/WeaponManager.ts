@@ -1,10 +1,12 @@
 import {_decorator, Node, UITransform, Vec2} from 'cc';
 import {EntityManager} from "db://assets/Scripts/Base/EntityManager";
-import {IActor, INPUT_TYPE_ENUM} from "db://assets/Scripts/Common";
 import {WeaponStateMachine} from "db://assets/Scripts/Entity/Weapon/WeaponStateMachine";
 import {ENTITY_STATE_ENUM, EVENT_ENUM} from "db://assets/Scripts/Enum";
 import EventManager from "db://assets/Scripts/Global/EventManager";
 import DataManager from "db://assets/Scripts/Global/DataManager";
+import {IActor} from "db://assets/Scripts/Common/State";
+import {INPUT_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
+import {toFixed} from "db://assets/Scripts/Common";
 const { ccclass, property } = _decorator;
 
 @ccclass('WeaponManager')
@@ -59,13 +61,16 @@ export class WeaponManager extends EntityManager {
         const direction = new Vec2(pointWorldPosition.x - anchorWorldPosition.x, pointWorldPosition.y - anchorWorldPosition.y).normalize()
 
         // 数据驱动子弹创建
-        DataManager.Instance.applyInput({
+        EventManager.Instance.emit(EVENT_ENUM.CLIENT_SYNC, {
             owner: this.owner,
             type: INPUT_TYPE_ENUM.WEAPON_SHOOT,
-            position: pointStagePosition,
+            position: {
+                x: toFixed(pointStagePosition.x),
+                y: toFixed(pointStagePosition.y)
+            },
             direction: {
-                x: direction.x,
-                y: direction.y
+                x: toFixed(direction.x),
+                y: toFixed(direction.y)
             }
         })
     }

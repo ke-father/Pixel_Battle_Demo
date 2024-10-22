@@ -1,6 +1,8 @@
 import {MyServer} from "./MyServer";
 import {WebSocket} from "ws";
 import EventEmitter from "stream";
+import {API_MSG_ENUM, binaryDecode, binaryEncode, IModel, strdeCode, strenCode} from "../Common";
+import {bufferToArrayBuffer} from "../Utils";
 
 interface IItem {
     cb: Function;
@@ -9,7 +11,7 @@ interface IItem {
 
 export class Connection extends EventEmitter {
     // 发布订阅模式
-    private messageMap: Map<string, Array<IItem>> = new Map();
+    private messageMap: Map<API_MSG_ENUM, Array<IItem>> = new Map();
 
     constructor(private server: MyServer, private ws: WebSocket) {
         super()
@@ -18,9 +20,15 @@ export class Connection extends EventEmitter {
             this.emit('close')
         })
 
-        this.ws.on('message', (buffer) => {
+        this.ws.on('message', (buffer: Buffer) => {
+            // const ta = new Uint8Array(buffer)
+            // const str = strdeCode(ta)
+            // const {name, data } = JSON.parse(str)
+
             try {
-                const {name, data } = JSON.parse(buffer.toString())
+                const json = binaryDecode(bufferToArrayBuffer(buffer))
+                const { name, data } = json
+
                 if (this.server.ApiMap.has(name)) {
                     try {
                         const cb = this.server.ApiMap.get(name)
@@ -37,9 +45,7 @@ export class Connection extends EventEmitter {
                     }
                 } else {
                     if (this.messageMap.has(name)) {
-                        this.messageMap.get(name).forEach(({cb, ctx}) => {
-                            cb.apply(ctx, data)
-                        })
+                        this.messageMap.get(name).forEach(({cb, ctx}) => cb.call(ctx, this, data))
                     }
                 }
             } catch (e) {
@@ -48,15 +54,26 @@ export class Connection extends EventEmitter {
         })
     }
 
-    sendMsg(name: string, data) {
+    sendMsg<T extends keyof IModel['msg']> (name: T, data: IModel['msg'][T]) {
         const msg = {
             name,
             data
         }
-        this.ws && this.ws.send(JSON.stringify(msg))
+
+        const da = binaryEncode(name, data)
+        const buffer = Buffer.from(da.buffer)
+        this.ws && this.ws.send(buffer)
+
+        // // 使用二进制编码压缩数据
+        // const str = JSON.stringify(msg)
+        // // 转为unit8Array数组
+        // const ta = strenCode(str)
+        // const buffer = Buffer.from(ta)
+        // // 传输buffer数据
+        // this.ws && this.ws.send(buffer)
     }
 
-    listenMsg(name: string, cb: Function, ctx: unknown) {
+    listenMsg<T extends keyof IModel['msg']> (name: T, cb: (connection: Connection, args: IModel['msg'][T]) => void, ctx: unknown) {
         if (this.messageMap.has(name)) {
             this.messageMap.get(name).push({cb, ctx})
         } else {
@@ -64,7 +81,7 @@ export class Connection extends EventEmitter {
         }
     }
 
-    unListerMsg(name: string, cb: Function, ctx: unknown) {
+    unListerMsg<T extends keyof IModel['msg']> (name: T, cb: (connection: Connection, args: IModel['msg'][T]) => void, ctx: unknown) {
         if (this.messageMap.has(name)) {
             const index = this.messageMap.get(name).findIndex((i) => cb === i.cb && i.ctx === ctx);
             index > -1 && this.messageMap.get(name).splice(index, 1);

@@ -14,6 +14,7 @@ export enum EVENT_ENUM {
   EXPLOSION_BORN= "explosionBorn",
   BULLET_BORN = "bulletBorn",
   CLIENT_SYNC = 'clientSync',
+  ROOM_JOIN = 'roomJoin',
 }
 
 export const PREFAB_PATH_ENUM = {
@@ -37,4 +38,11 @@ export enum TEXTURE_PATH_ENUM {
   Weapon1Attack = 'texture/weapon/weapon1/attack',
   Bullet2Idle = 'texture/bullet/bullet2',
   ExplosionIdle = 'texture/explosion',
+}
+
+export enum SCENE_ENUM {
+  LOGIN = 'Login',
+  BATTLE = 'Battle',
+  HALL = 'Hall',
+  ROOM = 'Room'
 }

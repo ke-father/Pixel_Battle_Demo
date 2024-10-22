@@ -1,14 +1,17 @@
-import {_decorator, Component, Node, instantiate, Prefab, SpriteFrame} from 'cc';
+import {_decorator, Component, instantiate, Node, Prefab, SpriteFrame} from 'cc';
 import EventManager from "db://assets/Scripts/Global/EventManager";
 import {EVENT_ENUM, PREFAB_PATH_ENUM, TEXTURE_PATH_ENUM} from "db://assets/Scripts/Enum";
 import DataManager from "db://assets/Scripts/Global/DataManager";
 import {NetWorkManager} from "db://assets/Scripts/Global/NetWorkManager";
-import {API_MSG_ENUM, ENTITY_TYPE_ENUM, IClientInput, INPUT_TYPE_ENUM} from "db://assets/Scripts/Common";
 import {JoyStickManager} from "db://assets/Scripts/UI/JoyStickManager";
 import ResourceManager from "db://assets/Scripts/Global/ResourceManager";
 import ObjectPoolManager from "db://assets/Scripts/Global/ObjectPoolManager";
 import ActorManager from "db://assets/Scripts/Entity/Actor/ActorManager";
 import {BulletManager} from "db://assets/Scripts/Entity/Bullet/BulletManager";
+import {API_MSG_ENUM, ENTITY_TYPE_ENUM, INPUT_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
+import {IClientInput} from "db://assets/Scripts/Common/State";
+import {IMsgClientSync, IMsgServerSync} from "db://assets/Scripts/Common/Msg";
+import {deepClone} from "db://assets/Scripts/Utils";
 
 const { ccclass, property } = _decorator;
 
@@ -20,6 +23,7 @@ export class BattleManager extends Component {
     private UI: Node
     // 是否加载任务完成
     private shouldUpdate = false
+    private pendingMsg: IMsgClientSync[] = []
 
     async start () {
         // 清空
@@ -30,7 +34,7 @@ export class BattleManager extends Component {
             await this.loadRes()
         ])
         // 加载
-        // this.initGame()
+        this.initGame()
     }
 
     // 链接websocket
@@ -114,10 +118,10 @@ export class BattleManager extends Component {
         // 调用ActorManager的tick方法
         this.tickActor(dt)
 
-        DataManager.Instance.applyInput({
-            type: INPUT_TYPE_ENUM.TIME_PAST,
-            dt,
-        })
+        // DataManager.Instance.applyInput({
+        //     type: INPUT_TYPE_ENUM.TIME_PAST,
+        //     dt,
+        // })
     }
 
     tickActor (dt) {
@@ -184,11 +188,27 @@ export class BattleManager extends Component {
             frameId: DataManager.Instance.frameId++
         }
         NetWorkManager.Instance.sendMsg(API_MSG_ENUM.MSG_CLIENT_SYNC, msg)
+
+        // 如果是移动才做预测回滚
+        if (input.type === INPUT_TYPE_ENUM.ACTOR_MOVE) {
+            DataManager.Instance.applyInput(input)
+            this.pendingMsg.push(msg)
+        }
     }
 
-    handleServerSync ({ inputs }) {
+    handleServerSync ({ inputs, lastFrameId }: IMsgServerSync) {
+        // 回滚
+        DataManager.Instance.state = DataManager.Instance.lastState
+
         for (const input of inputs) {
             DataManager.Instance.applyInput(input)
+        }
+
+        DataManager.Instance.lastState = deepClone(DataManager.Instance.state)
+
+        this.pendingMsg = this.pendingMsg.filter(msg => msg.frameId > lastFrameId)
+        for (const msg of this.pendingMsg) {
+            DataManager.Instance.applyInput(msg.input)
         }
     }
 }

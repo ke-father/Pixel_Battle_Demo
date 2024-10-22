@@ -1,7 +1,8 @@
-import { _decorator, Component, Node, EditBox } from 'cc';
+import { _decorator, Component, Node, EditBox, director } from 'cc';
 import {NetWorkManager} from "db://assets/Scripts/Global/NetWorkManager";
-import {API_MSG_ENUM} from "db://assets/Scripts/Common";
 import DataManager from "db://assets/Scripts/Global/DataManager";
+import {SCENE_ENUM} from "db://assets/Scripts/Enum";
+import {API_MSG_ENUM} from "db://assets/Scripts/Common/Enum";
 const { ccclass, property } = _decorator;
 
 @ccclass('LoginManager')
@@ -10,6 +11,8 @@ export class LoginManager extends Component {
 
     onLoad () {
         this.input = this.getComponentInChildren(EditBox)
+        // 预加载场景
+        director.preloadScene(SCENE_ENUM.HALL)
     }
 
     async start () {
@@ -35,7 +38,7 @@ export class LoginManager extends Component {
         if (!success) return console.log(error)
 
         DataManager.Instance.myPlayerId = res.player.id
-        console.log('res!', res)
+        director.loadScene(SCENE_ENUM.HALL)
     }
 }
 

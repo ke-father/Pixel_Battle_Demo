@@ -1,11 +1,14 @@
 import Singleton from "../Base/Singleton";
-import {ENTITY_TYPE_ENUM, IBullet, IClientInput, INPUT_TYPE_ENUM, IState} from "db://assets/Scripts/Common";
 import {JoyStickManager} from "db://assets/Scripts/UI/JoyStickManager";
 import {Node, Prefab, SpriteFrame} from "cc";
 import {EVENT_ENUM} from "db://assets/Scripts/Enum";
 import ActorManager from "db://assets/Scripts/Entity/Actor/ActorManager";
 import {BulletManager} from "db://assets/Scripts/Entity/Bullet/BulletManager";
 import EventManager from "db://assets/Scripts/Global/EventManager";
+import {ENTITY_TYPE_ENUM, INPUT_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
+import {IBullet, IClientInput, IState} from "db://assets/Scripts/Common/State";
+import {IRoom, toFixed} from "db://assets/Scripts/Common";
+import {randomBySeed} from "db://assets/Scripts/Utils";
 
 // 玩家移动速度
 const ACTOR_SPEED = 100
@@ -28,6 +31,8 @@ export default class DataManager extends Singleton {
     frameId = 1
     // 玩家id
     myPlayerId = 1
+    // 房间信息
+    roomInfo: IRoom
     // 舞台实例
     stage: Node
     // joyStickManager实例
@@ -41,43 +46,45 @@ export default class DataManager extends Singleton {
     // 贴图Map
     textureMap: Map<string, SpriteFrame[]> = new Map()
 
+    lastState: IState
     // 状态
     state: IState = {
         actors: [
-            {
-                id: 1,
-                hp: 30,
-                type: ENTITY_TYPE_ENUM.ACTOR1,
-                weaponType: ENTITY_TYPE_ENUM.WEAPON1,
-                bulletType: ENTITY_TYPE_ENUM.Bullet2,
-                position: {
-                    x: -150,
-                    y: -150
-                },
-                direction: {
-                    x: 1,
-                    y: 0
-                }
-            },
-
-            {
-                id: 2,
-                hp: 30,
-                type: ENTITY_TYPE_ENUM.ACTOR1,
-                weaponType: ENTITY_TYPE_ENUM.WEAPON1,
-                bulletType: ENTITY_TYPE_ENUM.Bullet2,
-                position: {
-                    x: 150,
-                    y: 150
-                },
-                direction: {
-                    x: -1,
-                    y: 0
-                }
-            }
+            // {
+            //     id: 1,
+            //     hp: 30,
+            //     type: ENTITY_TYPE_ENUM.ACTOR1,
+            //     weaponType: ENTITY_TYPE_ENUM.WEAPON1,
+            //     bulletType: ENTITY_TYPE_ENUM.Bullet2,
+            //     position: {
+            //         x: -150,
+            //         y: -150
+            //     },
+            //     direction: {
+            //         x: 1,
+            //         y: 0
+            //     }
+            // },
+            //
+            // {
+            //     id: 2,
+            //     hp: 30,
+            //     type: ENTITY_TYPE_ENUM.ACTOR1,
+            //     weaponType: ENTITY_TYPE_ENUM.WEAPON1,
+            //     bulletType: ENTITY_TYPE_ENUM.Bullet2,
+            //     position: {
+            //         x: 150,
+            //         y: 150
+            //     },
+            //     direction: {
+            //         x: -1,
+            //         y: 0
+            //     }
+            // }
         ],
         bullets: [],
-        nextBulletId: 1
+        nextBulletId: 1,
+        seed: 1
     }
 
     applyInput(input: IClientInput) {
@@ -93,8 +100,8 @@ export default class DataManager extends Singleton {
                 actor.direction.y = actorY
 
                 // 修改位置
-                actor.position.x += actorX * dt * ACTOR_SPEED
-                actor.position.y += actorY * dt * ACTOR_SPEED
+                actor.position.x += toFixed(actorX * dt * ACTOR_SPEED)
+                actor.position.y += toFixed(actorY * dt * ACTOR_SPEED)
                 break
             }
             // 类型射击
@@ -126,12 +133,18 @@ export default class DataManager extends Singleton {
                         const actor = this.state.actors[actorIndex]
                         if (actor.id === bullet.owner) continue
                         if ((actor.position.x - bullet.position.x) ** 2 + (actor.position.y - bullet.position.y) ** 2 < (ACTOR_RADIUS + BULLET_RADIUS) ** 2) {
+                            // 生成种子随机数
+                            const random = randomBySeed(this.state.seed)
+                            // 重新赋值种子
+                            this.state.seed = random
+                            // 是否产生暴击
+                            const damage = random / 233280 > 0.5 ? BULLET_DAMAGE * 2 : BULLET_DAMAGE
                             // 扣除血量
-                            actor.hp -= BULLET_DAMAGE
+                            actor.hp -= damage
                             // 发生爆炸效果
                             EventManager.Instance.emit(EVENT_ENUM.EXPLOSION_BORN, bullet.id, {
-                                x: (actor.position.x + bullet.position.x) / 2,
-                                y: (actor.position.y + bullet.position.y) / 2
+                                x: toFixed((actor.position.x + bullet.position.x) / 2),
+                                y: toFixed((actor.position.y + bullet.position.y) / 2)
                             })
                             // 消除子弹
                             bullets.splice(i, 1)
@@ -150,8 +163,8 @@ export default class DataManager extends Singleton {
                 }
 
                 for (let bullet of bullets) {
-                    bullet.position.x += bullet.direction.x * dt * BULLET_SPEED
-                    bullet.position.y += bullet.direction.y * dt * BULLET_SPEED
+                    bullet.position.x += toFixed(bullet.direction.x * dt * BULLET_SPEED)
+                    bullet.position.y += toFixed(bullet.direction.y * dt * BULLET_SPEED)
                 }
 
                 break

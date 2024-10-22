@@ -1,9 +1,9 @@
 import { _decorator, Animation, AnimationClip } from "cc";
 import State from "../../Base/State";
 import StateMachine, { getInitParamsTrigger } from "../../Base/StateMachine";
-import {ENTITY_TYPE_ENUM} from "db://assets/Scripts/Common";
 import {ENTITY_STATE_ENUM, ParamsNameEnum} from "db://assets/Scripts/Enum";
 import {WeaponManager} from "db://assets/Scripts/Entity/Weapon/WeaponManager";
+import {ENTITY_TYPE_ENUM} from "db://assets/Scripts/Common/Enum";
 const { ccclass } = _decorator;
 
 @ccclass("WeaponStateMachine")
